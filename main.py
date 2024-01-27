@@ -20,12 +20,12 @@ key3_disc_payload = {
     "type": "action",
     "subtype": "key3_pressed",
     "payload": "key3_pressed",
-    "topic": "sauna_ctrl/key3/action",
+    "topic": "sauna_ctrl/sauna_ctrl_key3/action",
     "device": {
         "name": "sauna_ctrl_key3"
     }
 }
-key3_trig_topic = "sauna_ctrl/key3/action"
+key3_trig_topic = "sauna_ctrl/sauna_ctrl_key3/action"
 key3_trig_payload = "key3_pressed"
 
 logging.basicConfig(level=logging.DEBUG)
