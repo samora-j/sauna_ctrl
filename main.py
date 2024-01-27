@@ -50,10 +50,10 @@ Font2 = ImageFont.truetype("Font/Font01.ttf",35)
 Font3 = ImageFont.truetype("Font/Font02.ttf",32)
 
 draw.rectangle([(0,65),(140,100)],fill = "WHITE")
-draw.text((5, 68), 'Hello world', fill = "BLACK",font=Font1)
+draw.text((5, 68), 'Hello world', fill = "BLACK",font=VolvoBroad)
 draw.rectangle([(0,115),(190,160)],fill = "RED")
-draw.text((5, 118), 'WaveShare', fill = "WHITE",font=Font2)
-draw.text((5, 160), '1234567890', fill = "GREEN",font=Font3)
+draw.text((5, 118), 'WaveShare', fill = "WHITE",font=VolvoBroad)
+draw.text((5, 160), '1234567890', fill = "GREEN",font=VolvoBroad)
 text= u"微雪电子"
 draw.text((5, 200),text, fill = "BLUE",font=Font3)
 im_r=image1.rotate(270)
