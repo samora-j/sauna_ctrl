@@ -7,8 +7,10 @@ import paho.mqtt.client as mqtt
 from PIL import Image,ImageDraw,ImageFont
 
 
-# topic
-# zigbee2mqtt/0xe0798dfffe57ec82/set
+# topics
+tp_pwr =  "zigbee2mqtt/0xe0798dfffe57ec82/set/#"
+tp_t_0 =  "SaunaTemp/Temp0/#"
+tp_t_1 =  "SaunaTemp/Temp1/#"
 
 logging.basicConfig(level=logging.DEBUG)
 # 240x240 display with hardware SPI:
@@ -18,14 +20,14 @@ disp = ST7789.ST7789()
 disp.Init()
 disp.clear()
 disp.bl_DutyCycle(50)
+FVB = ImageFont.truetype("VolvoBroad.ttf", 50)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
 draw = ImageDraw.Draw(image1)
 
-FVB = ImageFont.truetype("VolvoBroad.ttf", 50)
 
-draw.text((5, 68), 'Hello world', fill="WHITE", font=FVB)
+draw.text((5, 68), 'Power:', fill="WHITE", font=FVB)
 im_r = image1.rotate(180)
 disp.ShowImage(im_r)
 
@@ -36,9 +38,10 @@ def on_connect(client, userdata, flags, rc):
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe("zigbee2mqtt/0xe0798dfffe57ec82/set/#")
+    client.subscribe(tp_pwr)
+    client.subscribe(tp_t_0)
+    client.subscribe(tp_t_1)
 
-# The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
 
