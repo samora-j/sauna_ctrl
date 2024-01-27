@@ -22,11 +22,9 @@ key3_disc_payload = {
     "payload": "key3_pressed",
     "topic": "sauna_ctrl/sauna_ctrl_key3/action",
     "device": {
-        {
-            "identifiers": [
-                "sauna_ctrl_key3"
-            ]
-        }
+        "identifiers": [
+            "sauna_ctrl_key3"
+        ]
     }
 }
 key3_trig_topic = "sauna_ctrl/sauna_ctrl_key3/action"
