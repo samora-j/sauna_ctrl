@@ -19,8 +19,8 @@ disp.clear()
 disp.bl_DutyCycle(50)
 
 # Create blank image for drawing.
-#image1 = Image.new("RGB", (disp.width, disp.height), "WHITE")
-#draw = ImageDraw.Draw(image1)
+image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
+draw = ImageDraw.Draw(image1)
 #font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf', 16)
 #logging.info("draw point")
 
