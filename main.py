@@ -55,4 +55,27 @@ client.connect("fusion", 1883, 60)
 # handles reconnecting.
 # Other loop*() functions are available that give a threaded interface and a
 # manual interface.
-client.loop_forever()
+# client.loop_forever()
+client.loop_start()
+
+key1 = 0
+p_key1 = 0
+
+try:
+    while True:
+        key1 = disp.digital_read(disp.GPIO_KEY1_PIN)
+        if key1 != p_key1:
+            p_key1 = key1
+            if key1 == 1:
+                print("key1 pressed")
+            else:
+                print("key1 released")
+
+
+except:
+    print("exception")
+client.loop_stop(force=False)
+disp.module_exit()
+
+
+
