@@ -45,7 +45,7 @@ draw.arc((150,15,190,55),0, 360, fill =(0,255,0))
 draw.ellipse((150,65,190,105), fill = (0,255,0))
 
 logging.info("draw text")
-FVB = ImageFont.truetype("VolvoBroad.ttf")
+FVB = ImageFont.truetype("VolvoBroad.ttf",50)
 #Font2 = ImageFont.truetype("Font/Font01.ttf",35)
 #Font3 = ImageFont.truetype("Font/Font02.ttf",32)
 
