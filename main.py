@@ -8,9 +8,10 @@ from PIL import Image,ImageDraw,ImageFont
 
 
 # topics
-tp_pwr =  "zigbee2mqtt/0xe0798dfffe57ec82/set/#"
-tp_t_0 =  "SaunaTemp/Temp0/#"
-tp_t_1 =  "SaunaTemp/Temp1/#"
+tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set/#"
+tp_t_0 = "SaunaTemp/Temp0/#"
+tp_t_1 = "SaunaTemp/Temp1/#"
+MQTT_TOPICS = [(tp_pwr, 0), (tp_t_0, 0), (tp_t_1, 0)]
 
 logging.basicConfig(level=logging.DEBUG)
 # 240x240 display with hardware SPI:
@@ -35,12 +36,8 @@ disp.ShowImage(im_r)
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
+    client.subscribe(MQTT_TOPICS)
 
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
-    client.subscribe(tp_pwr)
-    client.subscribe(tp_t_0)
-    client.subscribe(tp_t_1)
 
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
@@ -50,12 +47,6 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 client.connect("fusion", 1883, 60)
-
-# Blocking call that processes network traffic, dispatches callbacks and
-# handles reconnecting.
-# Other loop*() functions are available that give a threaded interface and a
-# manual interface.
-# client.loop_forever()
 client.loop_start()
 
 key1 = 0
