@@ -2,8 +2,13 @@ import spidev as SPI
 import logging
 import ST7789
 import time
+import paho.mqtt.client as mqtt
 
 from PIL import Image,ImageDraw,ImageFont
+
+
+# topic
+# zigbee2mqtt/0xe0798dfffe57ec82/set
 
 logging.basicConfig(level=logging.DEBUG)
 # 240x240 display with hardware SPI:
@@ -11,56 +16,40 @@ disp = ST7789.ST7789()
 
 # Initialize library.
 disp.Init()
-
-# Clear display.
 disp.clear()
-
-#Set the backlight to 100
 disp.bl_DutyCycle(50)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
 draw = ImageDraw.Draw(image1)
 
-FVB = ImageFont.truetype("VolvoBroad.ttf",50)
+FVB = ImageFont.truetype("VolvoBroad.ttf", 50)
 
-#draw.rectangle([(0,65),(140,100)],fill = "WHITE")
-draw.text((5, 68), 'Hello world', fill = "WHITE",font=FVB)
-im_r=image1.rotate(180)
+draw.text((5, 68), 'Hello world', fill="WHITE", font=FVB)
+im_r = image1.rotate(180)
 disp.ShowImage(im_r)
-time.sleep(5)
 
 
-#font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf', 16)
-#logging.info("draw point")
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code "+str(rc))
 
-#draw.rectangle((5,10,6,11), fill = "BLACK")
-#draw.rectangle((5,25,7,27), fill = "BLACK")
-#draw.rectangle((5,40,8,43), fill = "BLACK")
-#draw.rectangle((5,55,9,59), fill = "BLACK")
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+    client.subscribe("zigbee2mqtt/0xe0798dfffe57ec82/set/#")
 
-#logging.info("draw line")
-#draw.line([(20, 10),(70, 60)], fill = "RED",width = 1)
-#draw.line([(70, 10),(20, 60)], fill = "RED",width = 1)
-#draw.line([(170,15),(170,55)], fill = "RED",width = 1)
-#draw.line([(150,35),(190,35)], fill = "RED",width = 1)
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print(msg.topic+" "+str(msg.payload))
 
-#logging.info("draw rectangle")
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
 
-#draw.rectangle([(20,10),(70,60)],fill = "WHITE",outline="BLUE")
-#draw.rectangle([(85,10),(130,60)],fill = "BLUE")
+client.connect("fusion", 1883, 60)
 
-#logging.info("draw circle")
-#draw.arc((150,15,190,55),0, 360, fill =(0,255,0))
-#draw.ellipse((150,65,190,105), fill = (0,255,0))
-
-#logging.info("draw text")
-#Font2 = ImageFont.truetype("Font/Font01.ttf",35)
-#Font3 = ImageFont.truetype("Font/Font02.ttf",32)
-#draw.rectangle([(0,115),(190,160)],fill = "RED")
-#draw.text((5, 118), 'WaveShare', fill = "WHITE",font=FVB)
-#draw.text((5, 160), '1234567890', fill = "GREEN",font=FVB)
-#text= u"微雪电子"
-#draw.text((5, 200),text, fill = "BLUE",font=FVB)
-#im_r=image1.rotate(270)
-#disp.ShowImage(im_r)
+# Blocking call that processes network traffic, dispatches callbacks and
+# handles reconnecting.
+# Other loop*() functions are available that give a threaded interface and a
+# manual interface.
+client.loop_forever()
