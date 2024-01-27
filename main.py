@@ -26,8 +26,8 @@ FVB = ImageFont.truetype("VolvoBroad.ttf",50)
 
 #draw.rectangle([(0,65),(140,100)],fill = "WHITE")
 draw.text((5, 68), 'Hello world', fill = "WHITE",font=FVB)
-image1.rotate(180)
-disp.ShowImage(image1)
+im_r=image1.rotate(180)
+disp.ShowImage(im_r)
 time.sleep(5)
 
 
