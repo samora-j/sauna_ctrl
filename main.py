@@ -26,9 +26,9 @@ FVB = ImageFont.truetype("VolvoBroad.ttf",50)
 
 #draw.rectangle([(0,65),(140,100)],fill = "WHITE")
 draw.text((5, 68), 'Hello world', fill = "WHITE",font=FVB)
-disp.ShowImage(image1)
 image1.rotate(180)
-time.sleep(3)
+disp.ShowImage(image1)
+time.sleep(5)
 
 
 #font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf', 16)
