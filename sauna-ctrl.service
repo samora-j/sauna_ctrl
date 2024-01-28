@@ -1,0 +1,12 @@
+[Unit]
+Description=Sauna-Control Service
+After=multi-user.target
+
+[Service]
+Type=idle
+User=marcushj
+ExecStart=/usr/bin/python3 /home/marcushj/sauna_ctrl/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
