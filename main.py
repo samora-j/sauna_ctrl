@@ -39,7 +39,7 @@ disp = ST7789.ST7789()
 disp.Init()
 disp.clear()
 disp.bl_DutyCycle(50)
-Font = ImageFont.truetype("Inconsolata-Bold.ttf", 30)
+Font = ImageFont.truetype("/home/marcushj/sauna_ctrl/Inconsolata-Bold.ttf", 30)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")

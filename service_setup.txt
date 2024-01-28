@@ -3,3 +3,5 @@ sudo chmod 644 /etc/systemd/system/sauna-ctrl.service
 
 sudo systemctl daemon-reload
 sudo systemctl enable sauna-ctrl
+
+journalctl -u sauna-ctrl.service -b
