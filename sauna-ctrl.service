@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=idle
-User=marcushj
+User=root
 ExecStart=/usr/bin/python3 /home/marcushj/sauna_ctrl/main.py
 Restart=always
 
