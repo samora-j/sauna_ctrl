@@ -45,8 +45,8 @@ image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
 draw = ImageDraw.Draw(image1)
 
 
-draw.text((5, 5),   '  Power:', fill="WHITE", font=Font)
-draw.text((5, 75),  ' Heater:', fill="WHITE", font=Font)
+draw.text((5, 10),   '  Power:', fill="WHITE", font=Font)
+draw.text((5, 80),  ' Heater:', fill="WHITE", font=Font)
 draw.text((5, 150), 'Ceiling:', fill="WHITE", font=Font)
 im_r = image1.rotate(180)
 disp.ShowImage(im_r)
@@ -60,7 +60,7 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic == tp_pwr:
         print("update power state")
-        draw.text((160, 5), str(msg.payload), fill="WHITE", font=Font)
+        draw.text((160, 10), msg.payload, fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
