@@ -9,10 +9,9 @@ from struct import *
 
 
 # topics
-tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set/#"
 tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set"
-tp_t_0 = "SaunaTemp/Temp0/#"
-tp_t_1 = "SaunaTemp/Temp1/#"
+tp_t_0 = "SaunaTemp/Temp0"
+tp_t_1 = "SaunaTemp/Temp1"
 MQTT_TOPICS = [(tp_pwr, 1), (tp_t_0, 1), (tp_t_1, 1)]
 
 key3_disc_topic = "homeassistant/device_automation/sauna_ctrl_key3/action_key3_press/config"
@@ -39,14 +38,16 @@ disp = ST7789.ST7789()
 disp.Init()
 disp.clear()
 disp.bl_DutyCycle(50)
-FVB = ImageFont.truetype("VolvoBroad.ttf", 50)
+Font = ImageFont.truetype("Inconsolata-Bold.ttf", 65)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
 draw = ImageDraw.Draw(image1)
 
 
-draw.text((5, 68), 'Power:', fill="WHITE", font=FVB)
+draw.text((5, 5),   '  Power:', fill="WHITE", font=Font)
+draw.text((5, 75),  ' Heater:', fill="WHITE", font=Font)
+draw.text((5, 150), 'Ceiling:', fill="WHITE", font=Font)
 im_r = image1.rotate(180)
 disp.ShowImage(im_r)
 
