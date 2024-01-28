@@ -39,7 +39,7 @@ disp = ST7789.ST7789()
 disp.Init()
 disp.clear()
 disp.bl_DutyCycle(50)
-Font = ImageFont.truetype("Inconsolata-Bold.ttf", 35)
+Font = ImageFont.truetype("Inconsolata-Bold.ttf", 30)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
@@ -61,14 +61,14 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic == tp_pwr:
         print("update power state")
-        draw.rectangle((160, 0, 240, 40), fill="BLACK")
+        draw.rectangle((150, 0, 240, 40), fill="BLACK")
         draw.text((160, 10), msg.payload.decode(), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
     if msg.topic == tp_t_0:
         print("update heater temp")
-        draw.rectangle((160, 80, 240, 120), fill="BLACK")
+        draw.rectangle((150, 80, 240, 120), fill="BLACK")
         data = json.loads(msg.payload.decode())
         h_temp = float(data['temperature'])
         h_temp_str = "{:.1f}".format(h_temp)
