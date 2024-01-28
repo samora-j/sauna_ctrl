@@ -38,7 +38,7 @@ disp = ST7789.ST7789()
 disp.Init()
 disp.clear()
 disp.bl_DutyCycle(50)
-Font = ImageFont.truetype("Inconsolata-Bold.ttf", 40)
+Font = ImageFont.truetype("Inconsolata-Bold.ttf", 35)
 
 # Create blank image for drawing.
 image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
@@ -60,6 +60,10 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic == tp_pwr:
         print("update power state")
+        draw.text((160, 5), str(msg.payload), fill="WHITE", font=Font)
+        im_r = image1.rotate(180)
+        disp.ShowImage(im_r)
+
 
 client = mqtt.Client()
 client.on_connect = on_connect
