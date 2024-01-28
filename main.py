@@ -10,6 +10,7 @@ from struct import *
 
 # topics
 tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set/#"
+tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set"
 tp_t_0 = "SaunaTemp/Temp0/#"
 tp_t_1 = "SaunaTemp/Temp1/#"
 MQTT_TOPICS = [(tp_pwr, 1), (tp_t_0, 1), (tp_t_1, 1)]
@@ -49,8 +50,6 @@ draw.text((5, 68), 'Power:', fill="WHITE", font=FVB)
 im_r = image1.rotate(180)
 disp.ShowImage(im_r)
 
-
-# The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
     client.subscribe(MQTT_TOPICS)
@@ -58,6 +57,8 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
+    if msg.topic == tp_pwr:
+        print("update power state")
 
 client = mqtt.Client()
 client.on_connect = on_connect
@@ -85,10 +86,8 @@ try:
         if key3 != p_key3:
             p_key3 = key3
             if key3 == 1:
-                print("key3 pressed")
+                print("key3 pressed - toggle power")
                 client.publish(topic=key3_trig_topic, payload=str(key3_trig_payload), qos=1, retain=False)
-            else:
-                print("key3 released")
 
 
 except:
