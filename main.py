@@ -60,7 +60,7 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic == tp_pwr:
         print("update power state")
-        draw.text((160, 10), msg.payload, fill="WHITE", font=Font)
+        draw.text((160, 10), msg.payload.decode(), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
