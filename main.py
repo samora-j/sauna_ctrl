@@ -2,6 +2,7 @@ import spidev as SPI
 import logging
 import ST7789
 import time
+import json
 import paho.mqtt.client as mqtt
 
 from PIL import Image, ImageDraw, ImageFont
@@ -60,11 +61,19 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic == tp_pwr:
         print("update power state")
-        draw.rectangle((160, 0, 240, 40), fill="RED")
+        draw.rectangle((160, 0, 240, 40), fill="BLACK")
         draw.text((160, 10), msg.payload.decode(), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
+    if msg.topic == tp_pt_0:
+        print("update heater temp")
+        draw.rectangle((160, 80, 240, 120), fill="BLACK")
+        h_temp = float(json.loads(msg.payload.decode()['temperature']))
+        h_temp_str = "{:.1f}".format(h_temp)
+        draw.text((160, 80), h_temp_str.rjust(5), fill="WHITE", font=Font)
+        im_r = image1.rotate(180)
+        disp.ShowImage(im_r)
 
 client = mqtt.Client()
 client.on_connect = on_connect
