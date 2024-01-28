@@ -79,7 +79,7 @@ def on_message(client, userdata, msg):
 
     if msg.topic == tp_t_1:
         print("update ceiling temp")
-        draw.rectangle((130, 120, 240, 160), fill="RED")
+        draw.rectangle((130, 150, 240, 190), fill="RED")
         data = json.loads(msg.payload.decode())
         h_temp = float(data['temperature'])
         h_temp_str = "{:.1f}".format(h_temp)
