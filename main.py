@@ -76,6 +76,17 @@ def on_message(client, userdata, msg):
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
+
+    if msg.topic == tp_t_1:
+        print("update ceiling temp")
+        draw.rectangle((130, 120, 240, 160), fill="RED")
+        data = json.loads(msg.payload.decode())
+        h_temp = float(data['temperature'])
+        h_temp_str = "{:.1f}".format(h_temp)
+        draw.text((130, 150), h_temp_str.rjust(5), fill="WHITE", font=Font)
+        im_r = image1.rotate(180)
+        disp.ShowImage(im_r)
+
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
