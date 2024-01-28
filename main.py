@@ -62,7 +62,7 @@ def on_message(client, userdata, msg):
     if msg.topic == tp_pwr:
         print("update power state")
         draw.rectangle((130, 0, 240, 40), fill="BLACK")
-        draw.text((130, 10), msg.payload.decode(), fill="WHITE", font=Font)
+        draw.text((130, 10), msg.payload.decode().rjust(5), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
@@ -79,7 +79,7 @@ def on_message(client, userdata, msg):
 
     if msg.topic == tp_t_1:
         print("update ceiling temp")
-        draw.rectangle((130, 150, 240, 190), fill="RED")
+        draw.rectangle((130, 150, 240, 190), fill="BLACK")
         data = json.loads(msg.payload.decode())
         h_temp = float(data['temperature'])
         h_temp_str = "{:.1f}".format(h_temp)
