@@ -66,7 +66,7 @@ def on_message(client, userdata, msg):
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
-    if msg.topic == tp_pt_0:
+    if msg.topic == tp_t_0:
         print("update heater temp")
         draw.rectangle((160, 80, 240, 120), fill="BLACK")
         h_temp = float(json.loads(msg.payload.decode()['temperature']))
