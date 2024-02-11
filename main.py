@@ -175,8 +175,7 @@ def on_message(client, userdata, msg):
     if msg.topic == tp_pwr_state:
         print("update power state")
         message_json = json.loads(msg.payload.decode())
-        print(message_json)
-        pwr_state = message_json.state
+        pwr_state = message_json['state']
         print(pwr_state)
         draw.rectangle((130, 0, 240, 40), fill="BLACK")
         draw.text((130, 10), pwr_state.rjust(5), fill="WHITE", font=Font)
