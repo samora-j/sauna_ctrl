@@ -10,7 +10,7 @@ from struct import *
 
 
 # topics
-tp_pwr = "zigbee2mqtt/0xe0798dfffe57ec82/set"
+tp_pwr_state = "zigbee2mqtt/0xe0798dfffe57ec82"
 tp_t_0 = "SaunaTemp/Temp0"
 tp_t_1 = "SaunaTemp/Temp1"
 MQTT_TOPICS = [(tp_pwr, 1), (tp_t_0, 1), (tp_t_1, 1)]
@@ -172,10 +172,13 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
-    if msg.topic == tp_pwr:
+    if msg.topic == tp_pwr_state:
         print("update power state")
+        message_json = json.loads(msg.payload)
+        pwr_state = message_json.state
+        print(pwr_state)
         draw.rectangle((130, 0, 240, 40), fill="BLACK")
-        draw.text((130, 10), msg.payload.decode().rjust(5), fill="WHITE", font=Font)
+        draw.text((130, 10), pwr_state.decode().rjust(5), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
         disp.ShowImage(im_r)
 
