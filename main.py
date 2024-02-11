@@ -13,7 +13,7 @@ from struct import *
 tp_pwr_state = "zigbee2mqtt/0xe0798dfffe57ec82"
 tp_t_0 = "SaunaTemp/Temp0"
 tp_t_1 = "SaunaTemp/Temp1"
-MQTT_TOPICS = [(tp_pwr, 1), (tp_t_0, 1), (tp_t_1, 1)]
+MQTT_TOPICS = [(tp_pwr_state, 1), (tp_t_0, 1), (tp_t_1, 1)]
 
 
 key_u_disc_topic = "homeassistant/device_automation/sauna_ctrl_key_u/action_key_u_press/config"
