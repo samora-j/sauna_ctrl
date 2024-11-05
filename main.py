@@ -159,9 +159,9 @@ image1 = Image.new("RGB", (disp.width, disp.height), "BLACK")
 draw = ImageDraw.Draw(image1)
 
 
-draw.text((5, 10),   '  Power:', fill="WHITE", font=Font)
-draw.text((5, 80),  ' Heater:', fill="WHITE", font=Font)
-draw.text((5, 150), 'Ceiling:', fill="WHITE", font=Font)
+draw.text((5, 10),  '  Power:', fill="WHITE", font=Font)
+draw.text((5, 80),  '   Temp:', fill="WHITE", font=Font)
+draw.text((5, 150), '  Aroma:', fill="WHITE", font=Font)
 im_r = image1.rotate(180)
 disp.ShowImage(im_r)
 
