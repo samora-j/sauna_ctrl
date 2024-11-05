@@ -183,7 +183,7 @@ def on_message(client, userdata, msg):
         disp.ShowImage(im_r)
 
     if msg.topic == tp_t_0:
-        print("update heater temp")
+        print("update temp")
         draw.rectangle((130, 80, 240, 120), fill="BLACK")
         data = json.loads(msg.payload.decode())
         h_temp = float(data['temperature'])
@@ -194,10 +194,10 @@ def on_message(client, userdata, msg):
 
 
     if msg.topic == tp_t_1:
-        print("update ceiling temp")
+        print("update aroma")
         draw.rectangle((130, 150, 240, 190), fill="BLACK")
         data = json.loads(msg.payload.decode())
-        h_temp = float(data['temperature'])
+        h_temp = float(data['volume'])
         h_temp_str = "{:.1f}".format(h_temp)
         draw.text((130, 150), h_temp_str.rjust(5), fill="WHITE", font=Font)
         im_r = image1.rotate(180)
