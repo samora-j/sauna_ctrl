@@ -10,7 +10,8 @@ from struct import *
 
 
 # topics
-tp_pwr_state = "zigbee2mqtt/0xe0798dfffe57ec82"
+#tp_pwr_state = "zigbee2mqtt/0xe0798dfffe57ec82"
+tp_pwr_state = "zigbee2mqtt/Sauna Power"
 tp_t_0 = "SaunaControl/Sensors1"
 tp_t_1 = "SaunaControl/Sensors3"
 MQTT_TOPICS = [(tp_pwr_state, 1), (tp_t_0, 1), (tp_t_1, 1)]
