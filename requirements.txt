@@ -1,0 +1,6 @@
+Pillow
+spidev
+numpy
+gpiozero
+websockets
+aiomqtt

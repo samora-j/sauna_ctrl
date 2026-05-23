@@ -1,0 +1,34 @@
+
+Kiuas LED+	Red	5:3
+Aromi LED+	Yellow	5:8
+Löyly LED+	Blue	5:7
+
+Kiuas switch	Orange	5:4	 pull up 5v
+Aromi Switch	Geen	5:5	 pull up 5v
+Löyly Switch	White	5:6	 pull up 5v
+
+GND		Black	
+GND		Brown	
+
+
+Löyly Valve	green		
+
+Pump Opto	Brown	5v
+Pump Step	Yellow	5:0
+Pump Direction	Green	5:1
+Pump Enable	Blue	5:2
+
+
+
+Mdrive17
+
+ I/O
+  brown		Opto
+  -
+  yellow	Step
+  green		Direction
+  blue		Enable
+
+ power
+  black		GND
+  red		V+

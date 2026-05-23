@@ -1,0 +1,19 @@
+[Unit]
+Description=Sauna Control Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=marcushj
+WorkingDirectory=/home/marcushj/sauna_ctrl
+ExecStart=/home/marcushj/sauna_ctrl/venv/bin/python main.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sauna-ctrl
+
+[Install]
+WantedBy=multi-user.target

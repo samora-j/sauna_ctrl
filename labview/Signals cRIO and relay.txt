@@ -1,0 +1,30 @@
+crio TTL module
+GND		Black	COM	pin 9
+GND		Brown	COM	pin 10
+Kiuas LED+	Red	DIO_0	pin 1
+Kiuas switch	Orange	DIO_1	pin 2
+Aromi LED+	Yellow	DIO_2	pin 3
+Aromi Switch	Geen	DIO_3	pin 4
+Löyly LED+	Blue	DIO_4	pin 5
+Löyly Switch	White	DIO_5	pin 6
+Löyly Valve	green	DIO_6	pin 7
+Aromi Pump	yellow	DIO_7	pin 8
+
+Pump Opto	Blue	COM	pin 28
+Pump Enable	Brown	DIO_12	pin 15
+Pump Direction	Green	DIO_13	pin 16
+Pump Step	Yellow	DIO_14	pin 17
+
+
+
+Mdrive17
+ power
+  red		V+
+  black		GND
+
+ I/O
+  brown		Enable
+  green		Direction
+  yellow	Step
+  -
+  blue		opto

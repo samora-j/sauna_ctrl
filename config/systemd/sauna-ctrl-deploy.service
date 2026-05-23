@@ -1,0 +1,11 @@
+[Unit]
+Description=sauna_ctrl auto-deploy — pull from GitHub and restart if changed
+
+[Service]
+Type=oneshot
+User=marcushj
+WorkingDirectory=/home/marcushj/sauna_ctrl
+ExecStart=/home/marcushj/sauna_ctrl/deploy.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sauna-ctrl-deploy
