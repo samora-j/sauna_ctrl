@@ -18,9 +18,9 @@ echo "✓ System packages installed"
 
 # 2. Create Python virtual environment
 echo "Creating Python virtual environment..."
-python3 -m venv venv
-venv/bin/pip install --upgrade pip --quiet
-venv/bin/pip install -r requirements.txt --quiet
+python3 -m venv pi/venv
+pi/venv/bin/pip install --upgrade pip --quiet
+pi/venv/bin/pip install -r pi/requirements.txt --quiet
 echo "✓ Python dependencies installed"
 
 # 3. Install systemd services

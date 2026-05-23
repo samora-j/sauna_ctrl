@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=marcushj
-WorkingDirectory=/home/marcushj/sauna_ctrl
-ExecStart=/home/marcushj/sauna_ctrl/venv/bin/python main.py
+WorkingDirectory=/home/marcushj/sauna_ctrl/pi
+ExecStart=/home/marcushj/sauna_ctrl/pi/venv/bin/python main.py
 Restart=always
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1

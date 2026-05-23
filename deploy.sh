@@ -25,10 +25,10 @@ git clean -fd
 
 # Always sync dependencies — pip is a no-op when nothing has changed
 echo "Syncing dependencies"
-/home/marcushj/sauna_ctrl/venv/bin/pip install -r requirements.txt --quiet
+/home/marcushj/sauna_ctrl/pi/venv/bin/pip install -r pi/requirements.txt --quiet
 
-# Check if any Python code changed
-if git diff "$LOCAL" "$REMOTE" --name-only | grep -q "\.py$"; then
+# Check if any Pi code changed
+if git diff "$LOCAL" "$REMOTE" --name-only | grep -q "^pi/"; then
     echo "Python code changed — restarting sauna-ctrl service"
     sudo systemctl restart sauna-ctrl
     echo "Service restarted"

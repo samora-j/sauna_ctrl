@@ -1,9 +1,10 @@
 import asyncio
 import logging
+from dataclasses import dataclass
+from pathlib import Path
 
 import ST7789
 from PIL import Image, ImageDraw, ImageFont
-from dataclasses import dataclass, field
 
 from ws_server import ws_server_task
 from mqtt_bridge import MQTTBridge
@@ -14,7 +15,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-_FONT_PATH = "/home/marcushj/sauna_ctrl/Inconsolata-Bold.ttf"
+_FONT_PATH = Path(__file__).parent / "Inconsolata-Bold.ttf"
 
 _BUTTON_PINS = {
     "key_u": "GPIO_KEY_UP_PIN",
