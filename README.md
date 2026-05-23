@@ -44,7 +44,7 @@ sauna_ctrl/
 
 ```
 LabVIEW RT Node                 Raspberry Pi                 Home Assistant
-(WebSocket client)          (WebSocket server + MQTT bridge)  (MQTT broker: fusion:1883)
+(WebSocket client)          (WebSocket server + MQTT bridge)  (MQTT broker: mqtt.samora.lan:1883)
         │                              │                              │
         │  ←── WebSocket (port 8765) ──│                              │
         │                              │                              │
@@ -153,7 +153,7 @@ Sent when triggered from Home Assistant (button entity press). LabVIEW RT zeros 
 
 ## MQTT Topics
 
-All topics use the broker at `fusion:1883`.
+All topics use the broker at `mqtt.samora.lan:1883`.
 
 ### RPi publishes (sensor data bridged from LabVIEW RT)
 
