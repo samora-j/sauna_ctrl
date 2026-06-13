@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from pathlib import Path
 
 import aiomqtt
 
@@ -13,6 +14,8 @@ _PORT = 1883
 _TEMP_DELTA = 0.5
 _AROMA_DELTA = 1.0
 _PERIODIC_S = 30.0
+
+_STATE_FILE = Path(__file__).parent / "actuator_state.json"
 
 _DEVICE = {
     "identifiers": ["sauna_ctrl"],
@@ -40,7 +43,7 @@ class MQTTBridge:
         self._display = display
         self._ws_to_sbrio = ws_to_sbrio
         self._client: aiomqtt.Client | None = None
-        self._actuators = dict(_ACTUATOR_DEFAULTS)
+        self._actuators = self._load_actuators()
 
         self._rl: dict = {
             "Ceiling_Temp": (None, 0.0),
@@ -48,6 +51,22 @@ class MQTTBridge:
             "Aromi_Volume": (None, 0.0),
         }
         self._bin: dict = {"door": None, "kiuas_button": None}
+
+    def _load_actuators(self) -> dict:
+        state = dict(_ACTUATOR_DEFAULTS)
+        try:
+            saved = json.loads(_STATE_FILE.read_text())
+            state.update({k: v for k, v in saved.items() if k in _ACTUATOR_DEFAULTS})
+            log.info("Loaded actuator state from %s", _STATE_FILE)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            log.info("No saved actuator state — using defaults")
+        return state
+
+    def _save_actuators(self):
+        try:
+            _STATE_FILE.write_text(json.dumps(self._actuators))
+        except OSError as exc:
+            log.warning("Failed to save actuator state: %s", exc)
 
     # ------------------------------------------------------------------ #
     # Callbacks invoked by ws_client                                       #
@@ -79,7 +98,8 @@ class MQTTBridge:
 
         kiuas_btn = msg.get("Kiuas_Button")
         if kiuas_btn is not None:
-            if not kiuas_btn and self._bin["kiuas_button"] is True:  # falling edge = release
+            if not kiuas_btn and self._bin["kiuas_button"]:  # falling edge = release
+                log.debug("Kiuas button released — publishing power_btn_pressed")
                 await client.publish("sauna_ctrl/power_btn/action", "power_btn_pressed", qos=1)
             self._bin["kiuas_button"] = kiuas_btn
 
@@ -106,6 +126,7 @@ class MQTTBridge:
             self._actuators["Aromi_Pump_Enable"] = on
             self._actuators["Aromi_Button_LED"] = on
         self._ws_to_sbrio.put_nowait(dict(self._actuators))
+        self._save_actuators()
 
     async def on_ws_connect(self):
         client = self._client
@@ -164,9 +185,9 @@ class MQTTBridge:
                 await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
 
             async for message in client.messages:
-                await self._handle(message)
+                await self._handle(client, message)
 
-    async def _handle(self, message):
+    async def _handle(self, client: aiomqtt.Client, message):
         topic = str(message.topic)
         payload = message.payload.decode()
 
@@ -189,6 +210,7 @@ class MQTTBridge:
             self._display.update_power(on)
             self._actuators["Kiuas_Button_LED"] = on
             self._ws_to_sbrio.put_nowait(dict(self._actuators))
+            self._save_actuators()
 
     # ------------------------------------------------------------------ #
     # HA discovery                                                         #
