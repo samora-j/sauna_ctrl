@@ -85,9 +85,9 @@ class MQTTBridge:
 
         door = msg.get("Door")
         if door is not None and door != self._bin["door"]:
-            # Door=true → closed → HA OFF; Door=false → open → HA ON
+            # Door=true → open → HA ON; Door=false → closed → HA OFF
             await client.publish(
-                "SaunaControl/door", "OFF" if door else "ON", qos=1
+                "SaunaControl/door", "ON" if door else "OFF", qos=1
             )
             self._bin["door"] = door
 
