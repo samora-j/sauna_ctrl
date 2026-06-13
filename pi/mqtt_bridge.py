@@ -33,7 +33,7 @@ _ACTUATOR_DEFAULTS = {
     "Aromi_Pump_Enable":    False,
     "Aromi_Pump":           False,
     "Aromi_Pump_Direction": False,
-    "Aromi_Pump_Cycle":     0,
+    "Aromi_Pump_Cycle":     125,
 }
 
 
@@ -60,6 +60,7 @@ class MQTTBridge:
             log.info("Loaded actuator state from %s", _STATE_FILE)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             log.info("No saved actuator state — using defaults")
+        state["Aromi_Pump_Cycle"] = 125
         return state
 
     def _save_actuators(self):
