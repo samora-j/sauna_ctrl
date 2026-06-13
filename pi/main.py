@@ -90,18 +90,16 @@ async def main():
     bridge = MQTTBridge(state, display, ws_to_sbrio)
 
     try:
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(
-                ws_client_task(
-                    ws_to_sbrio, state,
-                    on_sensors=bridge.on_sensors,
-                    on_connect=bridge.on_ws_connect,
-                    on_disconnect=bridge.on_ws_disconnect,
-                ),
-                name="ws-client",
-            )
-            tg.create_task(bridge.run(), name="mqtt")
-            tg.create_task(_button_poll_task(hw, bridge), name="buttons")
+        await asyncio.gather(
+            ws_client_task(
+                ws_to_sbrio, state,
+                on_sensors=bridge.on_sensors,
+                on_connect=bridge.on_ws_connect,
+                on_disconnect=bridge.on_ws_disconnect,
+            ),
+            bridge.run(),
+            _button_poll_task(hw, bridge),
+        )
     finally:
         hw.module_exit()
 
