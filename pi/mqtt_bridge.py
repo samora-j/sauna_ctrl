@@ -10,41 +10,47 @@ log = logging.getLogger(__name__)
 _BROKER = "mqtt.samora.lan"
 _PORT = 1883
 
-# Rate-limiting thresholds
-_TEMP_DELTA = 0.5   # °C
-_AROMA_DELTA = 1.0  # mL
-_PERIODIC_S = 30.0  # publish at least this often regardless of change
+_TEMP_DELTA = 0.5
+_AROMA_DELTA = 1.0
+_PERIODIC_S = 30.0
 
 _DEVICE = {
     "identifiers": ["sauna_ctrl"],
     "name": "Sauna Controller",
-    "model": "RPi + LabVIEW RT",
+    "model": "RPi + sbRIO-9642",
 }
 _AVAIL = {"topic": "sauna_ctrl/availability"}
 
+_ACTUATOR_DEFAULTS = {
+    "Kiuas_Button_LED":     False,
+    "Loyly_Button_LED":     False,
+    "Loyly_Valve_Enable":   False,
+    "Loyly_Valve":          False,
+    "Aromi_Button_LED":     False,
+    "Aromi_Pump_Enable":    False,
+    "Aromi_Pump":           False,
+    "Aromi_Pump_Direction": False,
+    "Aromi_Pump_Cycle":     0,
+}
+
 
 class MQTTBridge:
-    def __init__(self, state, display, ws_to_lv: asyncio.Queue):
+    def __init__(self, state, display, ws_to_sbrio: asyncio.Queue):
         self._state = state
         self._display = display
-        self._ws_to_lv = ws_to_lv
+        self._ws_to_sbrio = ws_to_sbrio
         self._client: aiomqtt.Client | None = None
+        self._actuators = dict(_ACTUATOR_DEFAULTS)
 
-        # Rate-limiting: (last_value, last_publish_monotonic)
         self._rl: dict = {
-            "ceiling_temp": (None, 0.0),
-            "heater_temp":  (None, 0.0),
-            "aroma_level":  (None, 0.0),
+            "Ceiling_Temp": (None, 0.0),
+            "Kiuas_Temp":   (None, 0.0),
+            "Aromi_Volume": (None, 0.0),
         }
-        # Last published state for binary sensors
-        self._bin: dict = {
-            "water_spray": None,
-            "aroma_pump":  None,
-            "door_closed": None,
-        }
+        self._bin: dict = {"door": None}
 
     # ------------------------------------------------------------------ #
-    # Callbacks invoked by ws_server                                       #
+    # Callbacks invoked by ws_client                                       #
     # ------------------------------------------------------------------ #
 
     async def on_sensors(self, msg: dict):
@@ -54,11 +60,10 @@ class MQTTBridge:
 
         now = time.monotonic()
 
-        # Continuous sensors — rate-limited
         for key, topic, delta in (
-            ("ceiling_temp", "SaunaControl/ceiling_temp", _TEMP_DELTA),
-            ("heater_temp",  "SaunaControl/heater_temp",  _TEMP_DELTA),
-            ("aroma_level",  "SaunaControl/aroma_level",  _AROMA_DELTA),
+            ("Ceiling_Temp", "SaunaControl/ceiling_temp", _TEMP_DELTA),
+            ("Kiuas_Temp",   "SaunaControl/kiuas_temp",   _TEMP_DELTA),
+            ("Aromi_Volume", "SaunaControl/aromi_volume", _AROMA_DELTA),
         ):
             val = msg.get(key)
             if val is None:
@@ -72,37 +77,26 @@ class MQTTBridge:
                 await client.publish(topic, f"{val:.1f}", qos=1)
                 self._rl[key] = (val, now)
 
-        # Binary sensors — publish immediately on change
-        binary = (
-            ("water_spray", "SaunaControl/water_spray", lambda v: "ON" if v else "OFF"),
-            ("aroma_pump",  "SaunaControl/aroma_pump",  lambda v: "ON" if v else "OFF"),
-            ("door_closed", "SaunaControl/door",        lambda v: "OFF" if v else "ON"),  # ON = open
-        )
-        for key, topic, fmt in binary:
-            val = msg.get(key)
-            if val is None:
-                continue
-            if val != self._bin[key]:
-                await client.publish(topic, fmt(val), qos=1)
-                self._bin[key] = val
+        door = msg.get("Door")
+        if door is not None and door != self._bin["door"]:
+            # Door=true → closed → HA OFF; Door=false → open → HA ON
+            await client.publish(
+                "SaunaControl/door", "OFF" if door else "ON", qos=1
+            )
+            self._bin["door"] = door
 
-        # Update display
-        ceiling = msg.get("ceiling_temp")
-        aroma = msg.get("aroma_level")
+        ceiling = msg.get("Ceiling_Temp")
+        aromi = msg.get("Aromi_Volume")
         if ceiling is not None:
             self._display.update_temp(ceiling)
-        if aroma is not None:
-            self._display.update_aroma(aroma)
-
-    async def on_power_btn(self):
-        client = self._client
-        if client:
-            await client.publish("sauna_ctrl/power_btn/action", "power_btn_pressed", qos=1)
+        if aromi is not None:
+            self._display.update_aroma(aromi)
 
     async def on_ws_connect(self):
         client = self._client
         if client:
             await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
+        self._ws_to_sbrio.put_nowait(dict(self._actuators))
 
     async def on_ws_disconnect(self):
         client = self._client
@@ -142,9 +136,7 @@ class MQTTBridge:
 
             await self._publish_discovery(client)
             await client.subscribe("zigbee2mqtt/Sauna Power")
-            await client.subscribe("SaunaControl/zero_adjust/press")
 
-            # If LabVIEW RT was already connected before MQTT reconnected, go online
             if self._state.ws_connected:
                 await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
 
@@ -162,10 +154,8 @@ class MQTTBridge:
                 on = payload.strip().upper() == "ON"
             self._state.power_on = on
             self._display.update_power(on)
-            self._ws_to_lv.put_nowait({"type": "power_indicator", "state": on})
-
-        elif topic == "SaunaControl/zero_adjust/press":
-            self._ws_to_lv.put_nowait({"type": "zero_adjust"})
+            self._actuators["Kiuas_Button_LED"] = on
+            self._ws_to_sbrio.put_nowait(dict(self._actuators))
 
     # ------------------------------------------------------------------ #
     # HA discovery                                                         #
@@ -175,10 +165,10 @@ class MQTTBridge:
         sensors = [
             ("sauna_ceiling_temp", "Sauna Ceiling Temperature",
              "SaunaControl/ceiling_temp", "temperature", "°C"),
-            ("sauna_heater_temp",  "Sauna Heater Temperature",
-             "SaunaControl/heater_temp",  "temperature", "°C"),
-            ("sauna_aroma_level",  "Sauna Aroma Level",
-             "SaunaControl/aroma_level",  None,           "mL"),
+            ("sauna_kiuas_temp",   "Sauna Kiuas Temperature",
+             "SaunaControl/kiuas_temp",   "temperature", "°C"),
+            ("sauna_aromi_volume", "Sauna Aromi Volume",
+             "SaunaControl/aromi_volume", None,          None),
         ]
         for obj_id, name, state_topic, dev_class, unit in sensors:
             cfg: dict = {
@@ -188,65 +178,32 @@ class MQTTBridge:
                 "device": _DEVICE,
                 "availability": [_AVAIL],
                 "expire_after": 60,
-                "unit_of_measurement": unit,
             }
             if dev_class:
                 cfg["device_class"] = dev_class
+            if unit:
+                cfg["unit_of_measurement"] = unit
             await client.publish(
                 f"homeassistant/sensor/{obj_id}/config",
                 json.dumps(cfg), qos=1, retain=True,
             )
 
-        binary_sensors = [
-            ("sauna_water_spray", "Sauna Water Spray", "SaunaControl/water_spray", "running"),
-            ("sauna_aroma_pump",  "Sauna Aroma Pump",  "SaunaControl/aroma_pump",  "running"),
-            ("sauna_door",        "Sauna Door",        "SaunaControl/door",         "door"),
-        ]
-        for obj_id, name, state_topic, dev_class in binary_sensors:
-            await client.publish(
-                f"homeassistant/binary_sensor/{obj_id}/config",
-                json.dumps({
-                    "name": name,
-                    "state_topic": state_topic,
-                    "unique_id": obj_id,
-                    "device": _DEVICE,
-                    "availability": [_AVAIL],
-                    "device_class": dev_class,
-                    "expire_after": 60,
-                    "payload_on": "ON",
-                    "payload_off": "OFF",
-                }),
-                qos=1, retain=True,
-            )
-
-        # Zero-adjust button
         await client.publish(
-            "homeassistant/button/sauna_zero_adjust/config",
+            "homeassistant/binary_sensor/sauna_door/config",
             json.dumps({
-                "name": "Sauna Aroma Zero Adjust",
-                "command_topic": "SaunaControl/zero_adjust/press",
-                "unique_id": "sauna_zero_adjust",
+                "name": "Sauna Door",
+                "state_topic": "SaunaControl/door",
+                "unique_id": "sauna_door",
                 "device": _DEVICE,
                 "availability": [_AVAIL],
+                "device_class": "door",
+                "expire_after": 60,
+                "payload_on": "ON",
+                "payload_off": "OFF",
             }),
             qos=1, retain=True,
         )
 
-        # Power button device automation
-        await client.publish(
-            "homeassistant/device_automation/sauna_power_btn/action_power_btn_press/config",
-            json.dumps({
-                "automation_type": "trigger",
-                "type": "action",
-                "subtype": "power_btn_pressed",
-                "payload": "power_btn_pressed",
-                "topic": "sauna_ctrl/power_btn/action",
-                "device": _DEVICE,
-            }),
-            qos=1, retain=True,
-        )
-
-        # RPi GPIO button device automations
         for key in ("key_u", "key_d", "key_l", "key_r", "key_p", "key1", "key2", "key3"):
             label = f"{key}_pressed"
             await client.publish(

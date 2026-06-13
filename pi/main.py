@@ -6,7 +6,7 @@ from pathlib import Path
 import ST7789
 from PIL import Image, ImageDraw, ImageFont
 
-from ws_server import ws_server_task
+from ws_client import ws_client_task
 from mqtt_bridge import MQTTBridge
 
 logging.basicConfig(
@@ -86,20 +86,19 @@ async def main():
 
     state = AppState()
     display = Display(hw)
-    ws_to_lv: asyncio.Queue = asyncio.Queue()
-    bridge = MQTTBridge(state, display, ws_to_lv)
+    ws_to_sbrio: asyncio.Queue = asyncio.Queue()
+    bridge = MQTTBridge(state, display, ws_to_sbrio)
 
     try:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(
-                ws_server_task(
-                    ws_to_lv, state,
+                ws_client_task(
+                    ws_to_sbrio, state,
                     on_sensors=bridge.on_sensors,
-                    on_power_btn=bridge.on_power_btn,
                     on_connect=bridge.on_ws_connect,
                     on_disconnect=bridge.on_ws_disconnect,
                 ),
-                name="ws-server",
+                name="ws-client",
             )
             tg.create_task(bridge.run(), name="mqtt")
             tg.create_task(_button_poll_task(hw, bridge), name="buttons")
