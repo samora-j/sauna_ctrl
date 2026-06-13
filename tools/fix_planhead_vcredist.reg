@@ -1,0 +1,5 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\VC\Runtimes\x64]
+"Installed"=dword:00000001
+"Version"="v10.0.40219.01"
