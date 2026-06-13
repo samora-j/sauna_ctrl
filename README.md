@@ -62,7 +62,7 @@ The sbRIO-9642 broadcasts sensor and button state. The RPi bridges this to Home 
 **Server:** sbRIO-9642, port `6123`  
 **Client:** Raspberry Pi  
 **Format:** UTF-8 JSON, one message per frame  
-**Keepalive:** disabled (`ping_interval=None`) — sbRIO does not respond to WebSocket pings; the sensor data stream serves as implicit keepalive
+**Keepalive:** disabled (`ping_interval=None`) — sbRIO does not respond to WebSocket pings; the sensor data stream serves as implicit keepalive, watched by the availability watchdog (see [Availability](#availability))
 
 ### sbRIO → RPi (sensor and button state)
 
@@ -182,9 +182,24 @@ squeezebox integration polls LMS. See `pi/lms_client.py`.
 
 ### Availability
 
-| Topic | Payload | Notes |
-|---|---|---|
-| `sauna_ctrl/availability` | `"online"` / `"offline"` | Published on WS connect/disconnect. `"offline"` set as MQTT LWT with `retain=True`. |
+The single liveness signal for the whole device. All entities reference it via
+`availability`, so they show `unavailable` together whenever the data stream is
+down. It is driven by the **inbound sensor-batch stream**, not just the WS
+socket state — because WS keepalive is disabled, a half-open connection where
+the socket stays up but frames stop would otherwise go unnoticed.
+
+| Condition | Payload |
+|---|---|
+| First sensor batch received | `"online"` |
+| No sensor batch for > 30 s (`_STREAM_STALL_S`, watchdog) | `"offline"` |
+| WS disconnect | `"offline"` |
+| RPi process dies / MQTT drops | `"offline"` (MQTT LWT, `retain=True`) |
+
+A 5 s watchdog (`_WATCHDOG_TICK_S`) checks the time since the last batch. The
+stall threshold must stay safely above the sbRIO's batch cadence to avoid false
+offlines. This replaces the old per-sensor `expire_after` on the door, which
+falsely flapped to unavailable whenever the door simply hadn't changed for 60 s
+(it publishes on change only).
 
 ---
 
@@ -205,7 +220,7 @@ All entities published to `homeassistant/<component>/<object_id>/config` with `r
 | `sauna_ceiling_temp` | `sensor` | Sauna Ceiling Temperature | °C, `expire_after: 60` |
 | `sauna_kiuas_temp` | `sensor` | Sauna Kiuas Temperature | °C, `expire_after: 60` |
 | `sauna_aromi_volume` | `sensor` | Sauna Aromi Volume | `expire_after: 60` |
-| `sauna_door` | `binary_sensor` | Sauna Door | `device_class: door`, `expire_after: 60` |
+| `sauna_door` | `binary_sensor` | Sauna Door | `device_class: door`, retained, no `expire_after` (liveness via availability) |
 | `sauna_loyly_enable` | `switch` | Enable Löyly | Command: `SaunaControl/loyly_enable/set` |
 | `sauna_aromi_enable` | `switch` | Enable Aromi | Command: `SaunaControl/aromi_enable/set` |
 | `sauna_power_btn` | `device_automation` | Sauna Power Button | Trigger on `sauna_ctrl/power_btn/action` |
@@ -219,10 +234,10 @@ All entities published to `homeassistant/<component>/<object_id>/config` with `r
 |---|---|
 | `ceiling_temp`, `kiuas_temp` | Change ≥ 0.5 °C **or** every 30 s |
 | `aromi_volume` | Change ≥ 1 unit **or** every 30 s |
-| `door` | Immediately on state change |
+| `door` | Immediately on state change (retained) |
 | Button events | Immediately on press/release |
 | Enable state | On MQTT connect (retained) and on change |
-| Availability | Immediately on WS connect / disconnect |
+| Availability | `online` on first batch; `offline` on stream stall (>30 s), WS disconnect, or LWT |
 
 ---
 

@@ -15,6 +15,13 @@ _TEMP_DELTA = 0.5
 _AROMA_DELTA = 1.0
 _PERIODIC_S = 30.0
 
+# Stream watchdog: if no sensor batch arrives from the sbRIO for this long, the
+# device is marked unavailable. Must be safely longer than the sbRIO's batch
+# cadence to avoid false offlines. The ws_client disables WS keepalive, so this
+# is the only thing that catches a half-open connection where data silently stops.
+_STREAM_STALL_S = 30.0
+_WATCHDOG_TICK_S = 5.0
+
 _STATE_FILE = Path(__file__).parent / "actuator_state.json"
 
 _DEVICE = {
@@ -52,6 +59,9 @@ class MQTTBridge:
         }
         self._bin: dict = {"door": None, "kiuas_button": None}
 
+        self._last_batch: float | None = None
+        self._stream_online: bool = False
+
     def _load_actuators(self) -> dict:
         state = dict(_ACTUATOR_DEFAULTS)
         try:
@@ -79,6 +89,9 @@ class MQTTBridge:
             return
 
         now = time.monotonic()
+        self._last_batch = now
+        if not self._stream_online:
+            await self._set_stream_online(True)
 
         for key, topic, delta in (
             ("Ceiling_Temp", "SaunaControl/ceiling_temp", _TEMP_DELTA),
@@ -106,9 +119,11 @@ class MQTTBridge:
 
         door = msg.get("Door")
         if door is not None and door != self._bin["door"]:
-            # Door=true → open → HA ON; Door=false → closed → HA OFF
+            # Door=true → open → HA ON; Door=false → closed → HA OFF.
+            # Retained so HA gets the current state on (re)subscribe — the door
+            # publishes on change only, so without retain a restart shows unknown.
             await client.publish(
-                "SaunaControl/door", "ON" if door else "OFF", qos=1
+                "SaunaControl/door", "ON" if door else "OFF", qos=1, retain=True
             )
             self._bin["door"] = door
 
@@ -129,16 +144,28 @@ class MQTTBridge:
         self._ws_to_sbrio.put_nowait(dict(self._actuators))
         self._save_actuators()
 
-    async def on_ws_connect(self):
+    async def _set_stream_online(self, online: bool):
+        """Publish availability, but only on a transition to avoid spamming."""
+        if online == self._stream_online:
+            return
+        self._stream_online = online
         client = self._client
         if client:
-            await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
+            await client.publish(
+                "sauna_ctrl/availability",
+                "online" if online else "offline",
+                qos=1, retain=True,
+            )
+        log.info("sbRIO stream %s", "online" if online else "offline")
+
+    async def on_ws_connect(self):
+        # Availability is driven by the data stream (first batch / watchdog),
+        # not the WS connect itself — the socket can be up with no data flowing.
         self._ws_to_sbrio.put_nowait(dict(self._actuators))
 
     async def on_ws_disconnect(self):
-        client = self._client
-        if client:
-            await client.publish("sauna_ctrl/availability", "offline", qos=1, retain=True)
+        self._last_batch = None
+        await self._set_stream_online(False)
 
     async def publish_button(self, key: str):
         client = self._client
@@ -169,6 +196,9 @@ class MQTTBridge:
         )
         async with aiomqtt.Client(_BROKER, port=_PORT, will=will) as client:
             self._client = client
+            # Force the next availability decision to publish (the retained LWT
+            # may have flipped us offline while MQTT was down).
+            self._stream_online = False
             log.info("MQTT connected to %s:%d", _BROKER, _PORT)
 
             await self._publish_discovery(client)
@@ -182,11 +212,29 @@ class MQTTBridge:
             await client.publish("SaunaControl/aromi_enable",
                 "ON" if self._actuators["Aromi_Pump_Enable"] else "OFF", qos=1, retain=True)
 
-            if self._state.ws_connected:
-                await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
+            # Republish online immediately if the stream is already alive,
+            # otherwise leave it to the next batch / watchdog.
+            if (self._state.ws_connected and self._last_batch is not None
+                    and (time.monotonic() - self._last_batch) <= _STREAM_STALL_S):
+                await self._set_stream_online(True)
 
-            async for message in client.messages:
-                await self._handle(client, message)
+            watchdog = asyncio.create_task(self._stream_watchdog())
+            try:
+                async for message in client.messages:
+                    await self._handle(client, message)
+            finally:
+                watchdog.cancel()
+
+    async def _stream_watchdog(self):
+        """Mark the device offline if the sbRIO stops feeding sensor batches."""
+        while True:
+            await asyncio.sleep(_WATCHDOG_TICK_S)
+            if self._last_batch is None or not self._stream_online:
+                continue
+            if (time.monotonic() - self._last_batch) > _STREAM_STALL_S:
+                log.warning("No sbRIO sensor batch for >%.0fs — marking offline",
+                            _STREAM_STALL_S)
+                await self._set_stream_online(False)
 
     async def _handle(self, client: aiomqtt.Client, message):
         topic = str(message.topic)
@@ -253,7 +301,6 @@ class MQTTBridge:
                 "device": _DEVICE,
                 "availability": [_AVAIL],
                 "device_class": "door",
-                "expire_after": 60,
                 "payload_on": "ON",
                 "payload_off": "OFF",
             }),
