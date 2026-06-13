@@ -79,7 +79,7 @@ class MQTTBridge:
 
         kiuas_btn = msg.get("Kiuas_Button")
         if kiuas_btn is not None:
-            if kiuas_btn and self._bin["kiuas_button"] is False:
+            if not kiuas_btn and self._bin["kiuas_button"] is True:  # falling edge = release
                 await client.publish("sauna_ctrl/power_btn/action", "power_btn_pressed", qos=1)
             self._bin["kiuas_button"] = kiuas_btn
 
@@ -97,6 +97,15 @@ class MQTTBridge:
             self._display.update_temp(ceiling)
         if aromi is not None:
             self._display.update_aroma(aromi)
+
+    def _set_enable(self, channel: str, on: bool):
+        if channel == "loyly":
+            self._actuators["Loyly_Valve_Enable"] = on
+            self._actuators["Loyly_Button_LED"] = on
+        elif channel == "aromi":
+            self._actuators["Aromi_Pump_Enable"] = on
+            self._actuators["Aromi_Button_LED"] = on
+        self._ws_to_sbrio.put_nowait(dict(self._actuators))
 
     async def on_ws_connect(self):
         client = self._client
@@ -142,6 +151,14 @@ class MQTTBridge:
 
             await self._publish_discovery(client)
             await client.subscribe("zigbee2mqtt/Sauna Power")
+            await client.subscribe("SaunaControl/loyly_enable/set")
+            await client.subscribe("SaunaControl/aromi_enable/set")
+
+            # Publish current enable states so HA is in sync after reconnect
+            await client.publish("SaunaControl/loyly_enable",
+                "ON" if self._actuators["Loyly_Valve_Enable"] else "OFF", qos=1, retain=True)
+            await client.publish("SaunaControl/aromi_enable",
+                "ON" if self._actuators["Aromi_Pump_Enable"] else "OFF", qos=1, retain=True)
 
             if self._state.ws_connected:
                 await client.publish("sauna_ctrl/availability", "online", qos=1, retain=True)
@@ -153,7 +170,17 @@ class MQTTBridge:
         topic = str(message.topic)
         payload = message.payload.decode()
 
-        if topic == "zigbee2mqtt/Sauna Power":
+        if topic == "SaunaControl/loyly_enable/set":
+            on = payload.strip().upper() == "ON"
+            self._set_enable("loyly", on)
+            await client.publish("SaunaControl/loyly_enable", "ON" if on else "OFF", qos=1, retain=True)
+
+        elif topic == "SaunaControl/aromi_enable/set":
+            on = payload.strip().upper() == "ON"
+            self._set_enable("aromi", on)
+            await client.publish("SaunaControl/aromi_enable", "ON" if on else "OFF", qos=1, retain=True)
+
+        elif topic == "zigbee2mqtt/Sauna Power":
             try:
                 on = json.loads(payload).get("state", "").upper() == "ON"
             except (json.JSONDecodeError, AttributeError):
@@ -209,6 +236,27 @@ class MQTTBridge:
             }),
             qos=1, retain=True,
         )
+
+        for obj_id, name, state_topic, cmd_topic in (
+            ("sauna_loyly_enable", "Enable Löyly",
+             "SaunaControl/loyly_enable", "SaunaControl/loyly_enable/set"),
+            ("sauna_aromi_enable", "Enable Aromi",
+             "SaunaControl/aromi_enable", "SaunaControl/aromi_enable/set"),
+        ):
+            await client.publish(
+                f"homeassistant/switch/{obj_id}/config",
+                json.dumps({
+                    "name": name,
+                    "state_topic": state_topic,
+                    "command_topic": cmd_topic,
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    "unique_id": obj_id,
+                    "device": _DEVICE,
+                    "availability": [_AVAIL],
+                }),
+                qos=1, retain=True,
+            )
 
         await client.publish(
             "homeassistant/device_automation/sauna_power_btn/action_power_btn_press/config",
