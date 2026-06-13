@@ -19,7 +19,7 @@ async def ws_client_task(
 ):
     while True:
         try:
-            async with websockets.connect(_URI) as websocket:
+            async with websockets.connect(_URI, ping_interval=None) as websocket:
                 log.info("Connected to sbRIO at %s", _URI)
                 state.ws_connected = True
                 await on_connect()
