@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from ws_client import ws_client_task
 from mqtt_bridge import MQTTBridge
+from lms_client import LMSClient
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +28,26 @@ _BUTTON_PINS = {
     "key2":  "GPIO_KEY2_PIN",
     "key3":  "GPIO_KEY3_PIN",
 }
+
+# LMS-controlled Squeezebox player for media transport.
+_LMS_HOST = "lyrion.samora.lan"
+_LMS_PORT = 9000
+_SAUNA_PLAYER = "Sauna"
+
+# Buttons still bridged to HA over MQTT (power toggle + a spare).
+_MQTT_BUTTONS = {"key3", "key_p"}
+
+
+def _media_actions(lms: LMSClient) -> dict:
+    """Map GPIO buttons to LMS transport actions (driven directly on the Pi)."""
+    return {
+        "key1":  lms.play_pause,
+        "key2":  lms.power_toggle,
+        "key_d": lms.volume_up,
+        "key_u": lms.volume_down,
+        "key_l": lms.next_track,
+        "key_r": lms.prev_track,
+    }
 
 
 @dataclass
@@ -66,7 +87,8 @@ class Display:
         self._hw.ShowImage(self._img.rotate(180))
 
 
-async def _button_poll_task(hw: ST7789.ST7789, bridge: MQTTBridge):
+async def _button_poll_task(hw: ST7789.ST7789, bridge: MQTTBridge, lms: LMSClient):
+    media = _media_actions(lms)
     prev = {key: 0 for key in _BUTTON_PINS}
     while True:
         for key, pin_attr in _BUTTON_PINS.items():
@@ -74,7 +96,10 @@ async def _button_poll_task(hw: ST7789.ST7789, bridge: MQTTBridge):
             if val != prev[key]:
                 prev[key] = val
                 if val == 1:
-                    await bridge.publish_button(key)
+                    if key in media:
+                        await media[key]()
+                    elif key in _MQTT_BUTTONS:
+                        await bridge.publish_button(key)
         await asyncio.sleep(0.05)
 
 
@@ -88,6 +113,7 @@ async def main():
     display = Display(hw)
     ws_to_sbrio: asyncio.Queue = asyncio.Queue()
     bridge = MQTTBridge(state, display, ws_to_sbrio)
+    lms = LMSClient(_LMS_HOST, _LMS_PORT, _SAUNA_PLAYER)
 
     try:
         await asyncio.gather(
@@ -98,7 +124,7 @@ async def main():
                 on_disconnect=bridge.on_ws_disconnect,
             ),
             bridge.run(),
-            _button_poll_task(hw, bridge),
+            _button_poll_task(hw, bridge, lms),
         )
     finally:
         hw.module_exit()

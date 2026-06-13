@@ -12,6 +12,7 @@ sauna_ctrl/
 │   ├── main.py                # asyncio entry point, display, GPIO buttons
 │   ├── ws_client.py           # WebSocket client task (connects to sbRIO)
 │   ├── mqtt_bridge.py         # MQTT publish/subscribe and HA discovery
+│   ├── lms_client.py          # Lyrion Music Server JSON-RPC media control
 │   ├── config.py              # GPIO and SPI hardware abstraction
 │   ├── ST7789.py              # ST7789 TFT display driver (240×240)
 │   ├── requirements.txt       # Python dependencies
@@ -145,17 +146,31 @@ All topics use the broker at `mqtt.samora.lan:1883`.
 
 ### RPi publishes (button events)
 
+Only the power and spare buttons are bridged to Home Assistant over MQTT.
+Media-transport buttons are handled on the Pi directly against LMS (see below)
+and are **not** published.
+
 | Topic | Payload | Description |
 |---|---|---|
-| `sauna_ctrl/power_btn/action` | `"power_btn_pressed"` | Kiuas button release on sbRIO |
-| `sauna_ctrl/sauna_ctrl_key_u/action` | `"key_u_pressed"` | RPi directional button up |
-| `sauna_ctrl/sauna_ctrl_key_d/action` | `"key_d_pressed"` | down |
-| `sauna_ctrl/sauna_ctrl_key_l/action` | `"key_l_pressed"` | left |
-| `sauna_ctrl/sauna_ctrl_key_r/action` | `"key_r_pressed"` | right |
-| `sauna_ctrl/sauna_ctrl_key_p/action` | `"key_p_pressed"` | press |
-| `sauna_ctrl/sauna_ctrl_key1/action` | `"key1_pressed"` | |
-| `sauna_ctrl/sauna_ctrl_key2/action` | `"key2_pressed"` | |
-| `sauna_ctrl/sauna_ctrl_key3/action` | `"key3_pressed"` | |
+| `sauna_ctrl/power_btn/action` | `"power_btn_pressed"` | Kiuas button release on sbRIO → HA power toggle |
+| `sauna_ctrl/sauna_ctrl_key3/action` | `"key3_pressed"` | RPi button outside the door → HA power toggle |
+| `sauna_ctrl/sauna_ctrl_key_p/action` | `"key_p_pressed"` | RPi joystick press — spare/unused |
+
+### RPi media control (LMS JSON-RPC, no HA round-trip)
+
+The RPi drives the **Sauna** Squeezebox player directly via the LMS JSON-RPC
+endpoint (`lyrion.samora.lan:9000/jsonrpc.js`), so media works even when Home
+Assistant is down. HA's `media_player.sauna` still mirrors state because the
+squeezebox integration polls LMS. See `pi/lms_client.py`.
+
+| Button | Action |
+|---|---|
+| `key1` | Play/pause toggle |
+| `key2` | Player on/off toggle |
+| `key_d` | Volume up |
+| `key_u` | Volume down |
+| `key_l` | Next track |
+| `key_r` | Previous track |
 
 ### RPi subscribes
 
@@ -223,7 +238,7 @@ All entities published to `homeassistant/<component>/<object_id>/config` with `r
 
 Three concurrent async tasks via `asyncio.gather`:
 1. **WebSocket client** — connects to sbRIO, receives sensor batches, sends actuator commands; reconnects on failure
-2. **Button poll** — 20 Hz GPIO poll, publishes button events to MQTT on rising edge
+2. **Button poll** — 20 Hz GPIO poll; on rising edge, power/spare buttons publish to MQTT and media buttons call LMS directly (`lms_client.py`)
 3. **MQTT client** — subscribes to power state and enable command topics; updates display, actuators, and sbRIO
 
 ---
@@ -248,4 +263,4 @@ Systemd timer fires `deploy.sh` every 30 s. Fetches from GitHub; if `pi/` change
 
 ## Known Issues / Open Debugging
 
-**Sauna power toggle not working (as of 2026-06-13):** Neither the RPi GPIO buttons nor the Kiuas button release event successfully trigger the sauna power relay toggle in Home Assistant. MQTT messages appear to be published correctly by the code; the suspected cause is that HA device automations were orphaned when the device model changed from "RPi + LabVIEW RT" to "RPi + sbRIO-9642", leaving existing HA automations pointing at the old device. To diagnose: verify MQTT traffic with `mosquitto_sub -h mqtt.samora.lan -t "sauna_ctrl/#" -v` while pressing buttons, then check HA automation triggers reference the current "Sauna Controller" device.
+**Sauna power toggle (resolved 2026-06-13):** The cause was a topic mismatch — the rebuilt controller publishes the Kiuas press to `sauna_ctrl/power_btn/action`, but the HA automation still listened to the old `sauna_ctrl/sauna_ctrl_key3/action`. HA's "sauna_ctrl Toggle Power" automation now triggers on **both** `power_btn` (Kiuas, inside) and `key3` (RPi button, outside the door).
