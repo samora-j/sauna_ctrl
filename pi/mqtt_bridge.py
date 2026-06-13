@@ -47,7 +47,7 @@ class MQTTBridge:
             "Kiuas_Temp":   (None, 0.0),
             "Aromi_Volume": (None, 0.0),
         }
-        self._bin: dict = {"door": None}
+        self._bin: dict = {"door": None, "kiuas_button": None}
 
     # ------------------------------------------------------------------ #
     # Callbacks invoked by ws_client                                       #
@@ -76,6 +76,12 @@ class MQTTBridge:
             ):
                 await client.publish(topic, f"{val:.1f}", qos=1)
                 self._rl[key] = (val, now)
+
+        kiuas_btn = msg.get("Kiuas_Button")
+        if kiuas_btn is not None:
+            if kiuas_btn and self._bin["kiuas_button"] is False:
+                await client.publish("sauna_ctrl/power_btn/action", "power_btn_pressed", qos=1)
+            self._bin["kiuas_button"] = kiuas_btn
 
         door = msg.get("Door")
         if door is not None and door != self._bin["door"]:
@@ -200,6 +206,19 @@ class MQTTBridge:
                 "expire_after": 60,
                 "payload_on": "ON",
                 "payload_off": "OFF",
+            }),
+            qos=1, retain=True,
+        )
+
+        await client.publish(
+            "homeassistant/device_automation/sauna_power_btn/action_power_btn_press/config",
+            json.dumps({
+                "automation_type": "trigger",
+                "type": "action",
+                "subtype": "power_btn_pressed",
+                "payload": "power_btn_pressed",
+                "topic": "sauna_ctrl/power_btn/action",
+                "device": _DEVICE,
             }),
             qos=1, retain=True,
         )
