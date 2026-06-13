@@ -2,5 +2,6 @@ Pillow
 spidev
 numpy
 gpiozero
+RPi.GPIO
 websockets
 aiomqtt
