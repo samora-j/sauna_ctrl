@@ -155,6 +155,11 @@ cython_debug/
 # LabVIEW RT build output
 labview/builds/
 
+# Runtime actuator state — persisted by the Pi bridge, must survive deploys.
+# deploy.sh runs `git clean -fd`, which would delete it if untracked and not
+# ignored here; gitignored files are left alone.
+pi/actuator_state.json
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
